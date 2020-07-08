@@ -1,0 +1,175 @@
+---
+title: "Initial Machine Learning Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+Library Packages
+```{r, echo = TRUE}
+library(dplyr)
+library(randomForest)
+library(caret)
+library(party)
+library(e1071)
+
+
+```
+
+
+
+Splitting Charges Variable into 3 Categories (Low, Mid, High), making sure it's balanced and Removing Charges Column
+```{r}
+
+setwd("C:/Users/Chris/Desktop/Data Science Certificate/Data Science Certificate Courses Spring 2020/CKME 136 (Capstone Course)")
+
+insur.info <- read.csv("insurance.csv")
+
+insurance <- read.csv("insurance.csv")
+
+insur.info$charge_bracket <- ifelse(insur.info$charges <= 6000, "low", ifelse(between(insur.info$charges, 6000, 13000), "Mid", ifelse(insur.info$charges >=1300, "High", "false")))
+
+insur.info <- insur.info[-7] #Removing Charges Column
+
+#Converting to Factors 
+insur.info$charge_bracket <- as.factor(insur.info$charge_bracket)
+
+insur.info$smoker <- as.factor(insur.info$smoker)
+
+insur.info$sex <- as.factor(insur.info$sex)
+
+insur.info$region <- as.factor(insur.info$region)
+
+
+
+summary(insur.info$charge_bracket)
+
+
+head(insur.info)
+```
+
+
+
+
+Random Forest
+```{r}
+#Found that doing a 70% training and 30% testing split was the best outcome for all models. Also, setting seed in order to reproduce the same results
+
+set.seed(100)
+ran.train <- sample(nrow(insur.info), 0.7*nrow(insur.info), replace = FALSE)
+training.set <- insur.info[ran.train,]
+test.set <- insur.info[-ran.train,]
+
+#Random Forest Model with Default Options
+ranfor.model <- randomForest(formula = charge_bracket~., data = training.set, importance = TRUE)
+ranfor.model
+
+
+
+#Changing Options to optimize the model
+op.ranfor.model <- randomForest(formula = charge_bracket~., data = training.set, ntree = 450, mtry = 50, importance = TRUE)
+op.ranfor.model
+
+
+#Doing Prediction for the Test set, then looking at confusion matrix and statistics using confusionMatrix()
+pred.ranfor.model <- predict(op.ranfor.model, test.set, type = "class")
+
+con.matrix.ranfor <- table(pred.ranfor.model, test.set$charge_bracket)
+
+confusionMatrix(con.matrix.ranfor)
+
+```
+
+
+
+
+Decision Tree 
+```{r}
+#Comparing Decision Tree with Random Forest 
+
+set.seed(100)
+
+#Constructing Decision Tree and Plotting 
+insur.ctree <- ctree(charge_bracket~., data = insur.info)
+print(insur.ctree)
+plot(insur.ctree, type = "simple")
+
+#Splitting the dataset into test and training set, 70:30 split again. 
+train.ind.dt <- sample(1:nrow(insur.info), 0.7 * nrow(insur.info))
+
+train.set.dt <- insur.info[train.ind.dt,]
+
+test.set.dt  <- insur.info[-train.ind.dt,]
+
+
+dt.insur.model <- ctree(charge_bracket~., data=train.set.dt)
+
+#Prediction with testset and looking at confusion matrix
+dt.insur.pred <- predict(dt.insur.model, test.set.dt) 
+# gives the probability for each class
+head(dt.insur.pred)
+
+con.matrix.dt <- table(dt.insur.pred, test.set.dt$charge_bracket)
+
+confusionMatrix(con.matrix.dt)
+
+```
+
+
+
+
+Support Vector Machine(SVM)
+```{r}
+set.seed(100)
+
+#Splitting data 70:30 split
+attach(insur.info)
+n <- nrow(insur.info)  
+n.train <- round(n*0.70) 
+train.index <- sample(n, n.train)
+train.set.insur <- insur.info[train.index,]
+test.set.insur <- insur.info[-train.index,]
+
+#Making the model
+svm.insur <- svm(charge_bracket~., data=insur.info, 
+          method="C-classification", kernal="radial", cost=1)
+
+summary(svm.insur)
+
+#Prediction with test and looking at Confusion Matrix
+pred.svm.model <- predict(svm.insur, test.set.insur)
+
+con.mat.svm <- table(test.set.insur$charge_bracket, pred.svm.model)
+
+confusionMatrix(con.mat.svm)
+
+```
+
+
+
+
+
+Naive Bayes
+```{r}
+#Fitting the model, then looking at the summary 
+N.B.model <- naiveBayes(charge_bracket ~., data=insur.info)
+
+N.B.model
+
+#Prediction on the dataset and looking at the confusion matrix
+N.B.pred <- predict(N.B.model,insur.info)
+
+con.matrix.nb <- table(N.B.pred,insur.info$charge_bracket)
+
+confusionMatrix(con.matrix.nb)
+```
+

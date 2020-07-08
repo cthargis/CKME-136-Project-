@@ -1,0 +1,273 @@
+---
+title: "Initial Exploratory Data Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r, echo = TRUE}
+library(ggplot2)
+library(RCurl)
+library(MASS)
+library(leaps)
+library(wesanderson)
+library(RColorBrewer)
+library(psych)
+library(readr)
+library(ggplot2) 
+library(corrplot)
+library(ggcorrplot)
+library(reshape2)
+library(dplyr) 
+library(tidyverse)
+library(solitude)
+```
+
+
+
+
+Reading Dataset 
+```{r}
+setwd("C:/Users/Chris/Desktop/Data Science Certificate/Data Science Certificate Courses Spring 2020/CKME 136 (Capstone Course)")
+
+insur.info <- read.csv("insurance.csv")
+
+head(insur.info, n = 10)
+
+str(insur.info)
+```
+
+
+
+
+Converting Appropriate Variables to Factor 
+```{r}
+insur.info$smoker <- as.factor(insur.info$smoker)
+
+insur.info$sex <- as.factor(insur.info$sex)
+
+insur.info$region <- as.factor(insur.info$region)
+```
+
+
+
+
+Summary Statistics
+```{r}
+summary(insur.info)
+
+#From the summary, it is seen that the age ranges from 18-64 years old 
+
+#Also, the dataset has a BMI mean of 30.66; therefore, on average, the people in this dataset are overwieght. BMI of 30 or over, are deemed to be overweight 
+
+#In the case of the Smoker column, there is a 4:1 ratio of non-smokers to smokers 
+
+#For Charges, the average medical costs are $13,270 with a median of $9,382. This high average cost could be related with the overweight BMI of the individuals in the dataset.  
+
+#Also, it is seen that the region and sex are evenly balanced among their respective groups 
+```
+
+
+
+
+Looking at Correlations and Distributions of Attributes
+```{r}
+pairs.panels(insur.info[c("smoker", "age", "bmi", "children", "sex", "region", "charges")])
+
+#From this, It can be ween that the attribute that is the most correlated with charges is Smoker (0.79), Age (0.30), and BMI(0.20); while the rest are very low. 
+
+#Histograms can be seen as well but they're quite small. Therefore, I'll be visualizing histograms again to get a better look at the distributions. 
+```
+
+
+
+
+Looking at Smoker due to High Correlation Using Boxplot and Histogram to get a better picture
+```{r}
+#Histogram for Visualiztion of Distribution
+ggplot(data = insur.info) + 
+geom_bar(mapping = aes(x = smoker), fill = c(6:7), position = position_stack(reverse = TRUE))
+
+#Boxplot to see difference in population
+smoker.costs <- ggplot(data = insur.info, aes(smoker,charges)) + geom_boxplot(fill = c(6:7), outlier.color = "red", outlier.shape = 1) + labs(title = "Boxplot of Health Care Premiums by Smokers", x = "Smoker", y = "Costs($)") 
+
+smoker.costs
+
+#From the visulization, it shows that individuals who smoke more pay much more than individuals who do not smoke. 
+
+```
+
+
+
+
+Changing Age to Factor to Look at the Boxplot and Scatterplot
+```{r}
+added.variables <- insur.info
+
+#Creating new column for the 3 age groups
+added.variables$age_group <- ifelse(insur.info$age <= 30, "young", ifelse(between(insur.info$age, 30, 48), "Middle ", ifelse(insur.info$age >=48, "Old", "false")))
+
+added.variables$age_group <- as.factor(added.variables$age_group)
+
+summary(added.variables$age_group)
+
+#Making Boxplot
+age.costs <- ggplot(data = added.variables, aes(age_group,charges)) + geom_boxplot(fill = c(2:4), outlier.color = "red", outlier.shape = 1) + labs(title = "Boxplot of Charges and Age", x = "Age Groups", y = "Costs($)")
+
+age.costs
+
+#Shows that the older the individual, the higher the health premiums 
+
+#Scatterplot to compare the Age, Costs and smoking of individuals 
+insur.info %>%
+ggplot(aes(x=age, y = charges, shape = smoker)) + geom_point(aes(color = smoker)) + labs(title = 'Looking at effects of Age and Smoking on Premiums', x = 'Age', y = 'Costs ($)')
+
+#This shows that individuals who smoke spend more. Also, the older you are, the higher the higher your costs will be. However, there's also a middle group that contains both smokers and non-smokers that pay relatively the same amount. This will be explored in the next plot. 
+
+
+```
+
+
+
+
+Changing BMI as a factor (YES or NO if individual is overweight), then looking at Boxplot
+```{r}
+#Changing BMI as a Factor (YES or NO if individual is over a BMI of 30 which is he cut off to indicate if individual is overweight)
+
+added.variables$overweight <- ifelse(added.variables$bmi>=30,"yes","no")
+
+added.variables$overweight<- as.factor(added.variables$overweight)
+
+summary(added.variables$overweight)
+
+#Plotting Boxplot
+bmi.costs <- ggplot(data = added.variables,aes(overweight,charges)) + geom_boxplot(fill = c(2:3)) +
+  theme_linedraw() + labs(title = "Boxplot of Health premiums and effects of being Overweight", x = expression(paste("Overweight(BMI over 30(kg/m"^2*"))")), y = "Costs($)")
+
+bmi.costs
+
+#From the boxplot it is seen that there is a slight difference between the two populations. Using describeBy() to get a specific look at the costs
+describeBy(added.variables$charges, added.variables$overweight)
+
+#From this, it can be seen that the non-overweight individuals have a mean of $10,713.67. While, individuals who are overweight have an average cost of $15,552.34. 
+
+
+
+#Scatterplot of BMI, Age, Costs and Smoking
+
+ggplot(data = added.variables, aes(x=bmi, y = charges, shape = smoker)) + geom_point(aes(color = age_group)) + labs(title = 'Looking at effects of BMI, Age, and Smoking on Premiums', x = 'BMI', y = 'Costs ($)')
+
+#From this, it is seen that althought individuals have a bmi over 30,  are in the old age group and are non-smokers, they still pay a relatively low amount (<$20k). However, the same group age a bmi group but are now smokers, end up paying more on their premium (>$40k). Also, from the other graph, where individuals who are non-smokers and smokers paying the same amount can be explained through BMI. In which these middle group individuals who are obese don't smoke and pay approximately around 20k, while individulas who smoke have a low BMI and pay around the same. 
+
+#Grouping smoking and bmi
+bmi.smoke <- added.variables %>% group_by(smoker, overweight) %>% summarise(num.individuals = n(), costs = mean(charges))
+bmi.smoke
+#Another way of showing how much more smoking adds to the medical costs even when you're overweight.
+
+```
+
+
+
+
+Visualization of Boxplot and Histogram for Region to get a better unstanding of the low negative Correlation
+```{r}
+#Histogram was also done to look at the distribution
+ggplot(data = insur.info) + 
+geom_bar(mapping = aes(x= region)) + labs(title = "Histogram of Regions", x = "Regions", y = "# of Individuals")
+
+region.costs <- ggplot(data = insur.info, aes(x=region, y=charges)) + geom_boxplot(fill = c(4:7), outlier.color = "red", outlier.shape = 1) + labs(title ="Boxplot of the Medical Charges in Each Region", x = "Regions", y = "Premium Costs ($)")  
+
+region.costs
+
+#From the Boxplot alone, there isn't much difference between the means of the 4 populations.
+
+#However, regions that were seen from either Northeast or Southeast had a slightly higher average than compared to the west due to some individuals having higher premiums in that region. 
+
+
+#Scatterplot looking at BMI, Smoking in these Regions 
+ggplot(data = added.variables, aes(x=region, y = charges)) + geom_point(aes(color = overweight, shape = smoker)) + labs(title = 'Effects of Smoking, Bmi and Region on Costs', x = 'Regions', y = 'Costs($)')
+
+#Looking at effects of age and region on costs
+ggplot(data = added.variables, aes(x=region, y = charges)) + geom_point(aes(color = age_group)) + labs(title = 'Effects of Age and Region on Costs', x = 'Regions', y = 'Costs($)')
+
+#The plots comparing the highest correlations with Regions don't tell much as to why some individuals in eastern regions pay more. 
+
+
+#Grouping based on region, bmi and smoker to see if information that can be found
+regen <- added.variables %>% group_by(region, overweight, smoker) %>% summarise(num.individuals = n(), costs = mean(charges))
+regen
+#Shows consisdency for individuals in each category. For example, individuals with lower than 30 bmi and no smoking had costs of approximaty 8k which can be seen in all regions with same parameters. 
+
+
+```
+
+
+
+
+Looking at Sex Through Boxplots and Scatterplots 
+```{r}
+sex.costs <- ggplot(data = insur.info, aes(x=sex, y=charges)) + geom_boxplot(fill = c(11:12)) + labs(title ="Boxplot of Sex and Cost of Premium", x = "Sex", y = "Cost($)") 
+
+sex.costs
+
+#From this plot, it can be seen that the populations are the same and don't have that much of an effect on costs. However, it can be seen that there are males that do pay higher premiums 
+
+
+#Scatterplot used to explain higher male costs
+ggplot(data = added.variables, aes(x=smoker, y = charges, shape = sex)) + geom_point(aes(color = sex)) + labs(title = 'Looking at Smoking and Gender on Premiums', x = 'Smoker', y = 'Costs ($)')
+#There looks to be a bit more blue(males) for individuals that smoke
+  
+#Grouping  males and females who smoke to see how many are in each group
+smoke.sex <- added.variables %>% group_by(smoker, sex) %>% summarise(num.individuals = n(), costs = mean(charges))
+smoke.sex
+#Have 44 more males that smoke than females, this increases  the average cost by $3,000. Explains why some males are spending more
+```
+
+
+
+
+Looking at the effect of the number of children premium holders have through Boxplots and Scatterplots
+```{r}
+children.costs <- ggplot(data = insur.info, aes(as.factor(children), y=charges)) + geom_boxplot(fill = c(10:15)) + labs(title ="Boxplot of Premium Holders Dependants and Healthcare Costs", x = "# of Children", y = "Costs($)") 
+
+children.costs
+
+#From this, it can be seen that individuals who have 3 children pay more than individuals with 5 children. 
+
+#Grouping my children to see average costs between each group
+dependents <- added.variables %>% group_by(children) %>% summarise(num.individuals = n(), costs = mean(charges))
+dependents
+
+#Now Grouping by Smoking, BMI and Children to see if they have an effect on Prices
+
+dependents.bmi <- added.variables %>% group_by(children, overweight) %>% summarise(num.individuals = n(), costs = mean(charges))
+dependents.bmi
+
+dependents.smoke <-  added.variables %>% group_by(children, smoker) %>% summarise(num.individuals = n(), costs = mean(charges))
+dependents.smoke
+
+#More non-smokers than smokers in all groups. However, Individuals have a higher BMI from individuals with 0-3 children. However, in individuals with 5 children, there are more non-smokers and more individuals with normal BMI.
+
+#Children to Factor
+added.variables$children <- as.factor(added.variables$children)
+
+#Now Visualizing with Scatterplot
+ggplot(data = added.variables, aes(x=children, y = charges)) + geom_point(aes(color = smoker)) + labs(title = 'Looking at Number of Children and the distriubtion of Smokers on Premiums', x = '# of Children', y = 'Costs($)')
+
+ggplot(data = added.variables, aes(x=children, y = charges)) + geom_point(aes(color = overweight)) + labs(title = 'Looking at Number of Children and the distriubtion of BMI on Premiums', x = '# of Children', y = 'Costs($)')
+
+#Shows that there are more obese individuals from 0-3 with thae amount of blue, while individuals with 4-5 children have a normal BMI(red)
+
+```
+
+
+
+
