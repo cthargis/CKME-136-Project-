@@ -1,1 +1,5 @@
 # CKME-136-Project-
+
+Abstract 
+
+Globally, health care expenditures make up approximately 10% of the worlds GDP and 17% of the GDP in the United States [4]. Particularly, a small notable population has been targeted to reduce spending due to their high rate of healthcare utilization; these individuals are deemed to be high cost, high needs (HCHN) patients [4]. In North America, it has been seen that these individuals represent a small portion of health care users but take up more than half of the hospital and home care spending [1]. Consequently, predictions for healthcare costs can help individuals to choose appropriate insurance plans or identify at risk HCHN individuals; in which interventions can be provided to combat high spending [3]. Therefore, from the medical cost personal dataset provided from kaggle [2], a classification analysis will be done to classify insurance costs as low, mid, and high cost individuals. Thus, the mode of analysis will include the use of random forest, support vector machine(SVM), and naïve bayes. These methods will be conducted using a combination of R and Python. 
